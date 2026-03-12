@@ -3,12 +3,11 @@ package Classes;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.LinkedList;
+
+import Classes.Functions.APIHandling;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -29,7 +28,7 @@ public class Session {
         this.root_url = "https://" + ip + ":443/api";
         this.base64Auth = Base64.getEncoder().encodeToString((username + ":" + password).getBytes());
 
-        this.subscribed_connection = create_https_url_connection(this.root_url + "/ssc/state/subscriptions", "GET", 2000, 0);
+        this.subscribed_connection = APIHandling.create_https_url_connection(this.root_url + "/ssc/state/subscriptions", "GET", 2000, 0, this.base64Auth, this.ip);
         int start_session_status = this.subscribed_connection.getResponseCode();
         if (start_session_status != 200){
             this.main_br = new BufferedReader((new InputStreamReader(this.subscribed_connection.getErrorStream())));
@@ -63,7 +62,7 @@ public class Session {
             }
         }
         payload_string.append("]");
-        HttpsURLConnection subscribing_https_url_connection = create_https_url_connection(this.root_url + "/ssc/state/subscriptions/" + this.session_id, "PUT");
+        HttpsURLConnection subscribing_https_url_connection = APIHandling.create_https_url_connection(this.root_url + "/ssc/state/subscriptions/" + this.session_id, "PUT", 2000, 5000, this.base64Auth, this.ip);
         subscribing_https_url_connection.setRequestProperty("Content-Type", "application/json");
         subscribing_https_url_connection.setDoOutput(true);
         try (OutputStream os = subscribing_https_url_connection.getOutputStream()) {
@@ -111,49 +110,12 @@ public class Session {
     }
 
     public void end() throws Exception{
-        HttpsURLConnection end_connection = create_https_url_connection(this.root_url + "/ssc/state/subscriptions/" + this.session_id, "DELETE", 5000, 5000);
+        HttpsURLConnection end_connection = APIHandling.create_https_url_connection(this.root_url + "/ssc/state/subscriptions/" + this.session_id, "DELETE", 5000, 5000, this.base64Auth, this.ip);
         int end_status = end_connection.getResponseCode();
         if (end_status != 200){
             // Write code to raise an exception with status code and respective error
         }
         this.subscribed_connection.disconnect();
         // Write exception management for connection
-    }
-
-    private HttpsURLConnection create_https_url_connection(String url, String request_method, int connect_timeout, int read_timeout) throws Exception{
-        TrustManager[] trust_specific_device = new TrustManager[] {
-                new X509TrustManager() {
-                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-                    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                }
-        };
-
-        SSLContext sc = SSLContext.getInstance("TLS");
-        sc.init(null, trust_specific_device, new java.security.SecureRandom());
-
-        URL connection_url = new URI(url).toURL();
-        HttpsURLConnection connection = (HttpsURLConnection) connection_url.openConnection();
-        connection.setRequestMethod(request_method);
-        connection.setConnectTimeout(connect_timeout);
-        connection.setReadTimeout(read_timeout);
-        connection.setRequestProperty("Authorization", "Basic " + this.base64Auth);
-
-        connection.setHostnameVerifier((hostname, session) -> {
-            if (hostname.equals(this.ip)) {
-                return true;
-            }
-            return HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, session);
-        });
-
-        connection.setSSLSocketFactory(sc.getSocketFactory());
-
-        return connection;
-        // Write exception code
-    }
-
-    private HttpsURLConnection create_https_url_connection(String url, String request_method) throws Exception{
-        return create_https_url_connection(url, request_method, 2000, 5000);
-        // Continue exception code
     }
 }
