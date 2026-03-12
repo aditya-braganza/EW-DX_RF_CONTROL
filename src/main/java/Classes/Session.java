@@ -16,13 +16,14 @@ import javax.net.ssl.*;
 
 public class Session {
     private final String root_url;
+    private final String ip;
     private String session_id;
     private final String base64Auth;
     private final HttpsURLConnection subscribed_connection;
     private BufferedReader main_br;
 
     public Session(String ip, String username, String password) throws Exception {
-        disableSslVerification();
+        this.ip = ip;
         this.root_url = "https://" + ip + ":443/api";
         this.base64Auth = Base64.getEncoder().encodeToString((username + ":" + password).getBytes());
 
@@ -101,12 +102,33 @@ public class Session {
     }
 
     private HttpsURLConnection create_https_url_connection(String url, String request_method, int connect_timeout, int read_timeout) throws Exception{
+        TrustManager[] trust_specific_device = new TrustManager[] {
+                new X509TrustManager() {
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                }
+        };
+
+        SSLContext sc = SSLContext.getInstance("TLS");
+        sc.init(null, trust_specific_device, new java.security.SecureRandom());
+
         URL connection_url = new URI(url).toURL();
         HttpsURLConnection connection = (HttpsURLConnection) connection_url.openConnection();
         connection.setRequestMethod(request_method);
         connection.setConnectTimeout(connect_timeout);
         connection.setReadTimeout(read_timeout);
         connection.setRequestProperty("Authorization", "Basic " + this.base64Auth);
+
+        connection.setHostnameVerifier((hostname, session) -> {
+            if (hostname.equals(this.ip)) {
+                return true;
+            }
+            return HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, session);
+        });
+
+        connection.setSSLSocketFactory(sc.getSocketFactory());
+
         return connection;
         // Write exception code
     }
@@ -114,36 +136,5 @@ public class Session {
     private HttpsURLConnection create_https_url_connection(String url, String request_method) throws Exception{
         return create_https_url_connection(url, request_method, 2000, 5000);
         // Continue exception code
-    }
-
-    public static void disableSslVerification() {
-        try {
-            // Create a trust manager that blindly accepts all certificates
-            TrustManager[] trustAllCerts = new TrustManager[] {
-                    new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() { return null; }
-                        public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-                        public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-                    }
-            };
-
-            // Install the all-trusting trust manager
-            SSLContext sc = SSLContext.getInstance("SSL");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-            // Create an all-trusting host name verifier
-            HostnameVerifier allHostsValid = new HostnameVerifier() {
-                public boolean verify(String hostname, SSLSession session) {
-                    return true;
-                }
-            };
-
-            // Install the all-trusting host verifier
-            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-
-        } catch (Exception e) {
-            System.out.println("Failed to bypass SSL: " + e.getMessage());
-        }
     }
 }
