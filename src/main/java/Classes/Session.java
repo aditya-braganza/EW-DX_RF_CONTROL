@@ -18,7 +18,7 @@ public class Session {
     private final String root_url;
     private String session_id;
     private final String base64Auth;
-    private HttpsURLConnection subscribed_connection;
+    private final HttpsURLConnection subscribed_connection;
     private BufferedReader main_br;
 
     public Session(String ip, String username, String password) throws Exception {
