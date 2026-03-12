@@ -42,24 +42,8 @@ public class Session {
         // Write exception code
     }
 
-    public void subscribe(String payload_string) throws Exception {
-        this.subscribed_connection = create_http_url_connection(this.root_url + "/ssc/state/subscriptions/" + this.session_id, "PUT");
-        this.subscribed_connection.setRequestProperty("Content-Type", "application/json");
-        this.subscribed_connection.setDoOutput(true);
-        try (OutputStream os = this.subscribed_connection.getOutputStream()) {
-            byte[] input = payload_string.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        }
-        int responseCode = this.subscribed_connection.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
-        if (responseCode != 200){
-            //Write code to throw an exception
-        }
-        // Write exception code
-    }
-
     public void subscribe() throws Exception {
-        subscribe("{\"paths\":[\"/\"]}");
+        subscribe(new String[]{"/"});
         // Continue exception code
     }
 
@@ -72,8 +56,19 @@ public class Session {
             }
         }
         payload_string.append("\"]}");
-        subscribe(payload_string.toString());
-        // Continue exception code
+        this.subscribed_connection = create_http_url_connection(this.root_url + "/ssc/state/subscriptions/" + this.session_id, "PUT");
+        this.subscribed_connection.setRequestProperty("Content-Type", "application/json");
+        this.subscribed_connection.setDoOutput(true);
+        try (OutputStream os = this.subscribed_connection.getOutputStream()) {
+            byte[] input = payload_string.toString().getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+        int responseCode = this.subscribed_connection.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+        if (responseCode != 200){
+            //Write code to throw an exception
+        }
+        // Write exception code
     }
 
     public void end() throws Exception{
