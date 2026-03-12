@@ -4,7 +4,11 @@ import com.google.gson.JsonObject;
 void main() {
     try{
         Session session = new Session("10.10.20.251", "api", "ParadiseGreen1!");
-        session.subscribe("/api/channel/0");
+        LinkedList<String> subscriptions = new LinkedList<>();
+        for (int i = 0; i < 292; i ++){
+            subscriptions.add("/api/channel/" + i);
+        }
+        session.add_subscriptions(subscriptions);
         while (true){
             JsonObject obj = session.get_subscribed_content();
             if (obj != null){

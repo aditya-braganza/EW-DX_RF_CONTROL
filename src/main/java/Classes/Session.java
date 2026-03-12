@@ -8,6 +8,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.LinkedList;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -21,6 +22,7 @@ public class Session {
     private final String base64Auth;
     private final HttpsURLConnection subscribed_connection;
     private BufferedReader main_br;
+    LinkedList<String> subscriptions = new LinkedList<>();
 
     public Session(String ip, String username, String password) throws Exception {
         this.ip = ip;
@@ -52,15 +54,11 @@ public class Session {
         }
     }
 
-    public void subscribe(String payload) throws Exception {
-        subscribe(new String[]{payload});
-    }
-
-    public void subscribe(String[] payloads) throws Exception {
+    private void set_subscriptions() throws Exception{
         StringBuilder payload_string = new StringBuilder("[");
-        for (int i = 0; i < payloads.length; i++){
-            payload_string.append("\"").append(payloads[i]).append("\"");
-            if (i < payloads.length - 1){
+        for (int i = 0; i < this.subscriptions.size(); i++){
+            payload_string.append("\"").append(this.subscriptions.get(i)).append("\"");
+            if (i < this.subscriptions.size() - 1){
                 payload_string.append(",");
             }
         }
@@ -77,7 +75,28 @@ public class Session {
             System.out.println("1: " + responseCode);
             //Write code to throw an exception
         }
+        subscribing_https_url_connection.disconnect();
         // Write exception code
+    }
+
+    public void add_subscriptions(LinkedList<String> subscriptions) throws Exception {
+        for (String subscription: subscriptions){
+            if (!this.subscriptions.contains(subscription)){
+                this.subscriptions.add(subscription);
+            }
+        }
+        set_subscriptions();
+        // Write exception code
+    }
+
+    public void remove_subscriptions(LinkedList<String> subscriptions){
+        for (String subscription: subscriptions){
+            this.subscriptions.remove(subscription);
+        }
+    }
+
+    public void clear_subscriptions(){
+        this.subscriptions.clear();
     }
 
     public JsonObject get_subscribed_content() throws Exception{
